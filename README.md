@@ -71,21 +71,6 @@ DNS.1 = localhost
 DNS.2 = vmota
 EOF
 
-
-# Server
-sudo tee /root/service/key/server-localhost-openssl.cnf > /dev/null <<EOF
-[dn]
-CN=localhost
-
-[req]
-distinguished_name = dn
-
-[EXT]
-subjectAltName=DNS:localhost
-keyUsage=digitalSignature
-extendedKeyUsage=serverAuth
-EOF
-
 sudo openssl req -x509 -out /root/service/key/localhost.crt -keyout /root/service/key/localhost.key \
   -newkey rsa:2048 -nodes -sha256 \
   -subj '/CN=localhost' -extensions EXT -config /root/service/key/localhost-openssl.cnf
@@ -142,7 +127,7 @@ sudo openssl pkcs12 -export -out /root/service/key/cert.p12 \
   -passin pass:keystorepass123 \
   -passout pass:keystorepass123
 
-openssl verify -CAfile /root/service/key/ca.cert.pem /root/service/key/cert.p12
+sudo openssl verify -CAfile /root/service/key/ca.cert.pem /root/service/key/cert.p12
 
 sudo keytool -importcert \
   -alias rabbitmq-ca \
@@ -161,6 +146,9 @@ sudo touch /root/service/hawkbit/config/rabbitmq.conf
 sudo vi /root/service/hawkbit/config/rabbitmq.conf
 
 sudo openssl s_client -connect localhost:5671 -CAfile /root/service/key/ca.cert.pem
+sudo openssl s_client -connect localhost:5671 -cert /root/service/key/client.cert.pem \
+  -key /root/service/key/client.key.pem \
+  -CAfile /root/service/key/ca.cert.pem
 
 sudo cp /root/service/key/ca.cert.pem /usr/local/share/ca-certificates/mgr-ca.crt
 sudo update-ca-certificates
@@ -310,7 +298,8 @@ After=network.target
 
 [Service]
 User=root
-ExecStart=/usr/bin/java -jar /root/service/hawkbit/bin/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.location=/root/service/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application-rabbitmq 
+ExecStart=/usr/bin/java -jar /root/service/hawkbit/bin/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.location=/root/service/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application-rabbitmq
+# ExecStart=/usr/bin/java -Djavax.net.debug=ssl,handshake -jar /root/service/hawkbit/bin/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.name=application-rabbitmq --spring.config.location=/root/service/hawkbit/config/ --spring.profiles.active=prod # Debug SSL
 SuccessExitStatus=143
 Restart=always
 RestartSec=10

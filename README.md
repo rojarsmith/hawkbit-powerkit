@@ -22,20 +22,107 @@ mkdir config
 git clone https://github.com/rojarsmith/hawkbit-powerkit.git
 ```
 
-## TLS
+## SSL/TLS
 
 ```bash
-sudo mkdir -p /root/service/key
+# CA
+sudo tee /root/service/key/ca-openssl.cnf > /dev/null <<EOF
+[req]
+distinguished_name = req_distinguished_name
+x509_extensions = v3_ca
+prompt = no
+
+[req_distinguished_name]
+C = TW
+ST = Taiwan
+L = Taipei
+O = My Local CA
+CN = My Local CA
+
+[v3_ca]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:TRUE
+keyUsage = critical, keyCertSign, cRLSign
+EOF
+
+# Server
+sudo tee /root/service/key/server-localhost-openssl.cnf > /dev/null <<EOF
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C = TW
+ST = Taiwan
+L = Taipei
+O = MyServer
+CN = localhost
+
+[v3_req]
+subjectAltName = @alt_names
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[alt_names]
+DNS.1 = localhost
+DNS.2 = vmota
+EOF
+
+
+# Server
+sudo tee /root/service/key/server-localhost-openssl.cnf > /dev/null <<EOF
+[dn]
+CN=localhost
+
+[req]
+distinguished_name = dn
+
+[EXT]
+subjectAltName=DNS:localhost
+keyUsage=digitalSignature
+extendedKeyUsage=serverAuth
+EOF
+
+sudo openssl req -x509 -out /root/service/key/localhost.crt -keyout /root/service/key/localhost.key \
+  -newkey rsa:2048 -nodes -sha256 \
+  -subj '/CN=localhost' -extensions EXT -config /root/service/key/localhost-openssl.cnf
+  
+sudo cp /root/service/key/localhost.crt /root/service/key/cert.pem
+sudo cp /root/service/key/localhost.key /root/service/key/key.pem
+
 # CA private key
 sudo openssl genrsa -out /root/service/key/ca.key.pem 4096
-# CA certification
-sudo openssl req -x509 -new -key /root/service/key/ca.key.pem -subj "/C=TW/ST=TAIWAN/O=yowko" -sha256 -days 365 -out /root/service/key/ca.cert.pem
+
+# CA certification, Import to `Trusted Root Certification Authorities`
+sudo openssl req -x509 -new -key /root/service/key/ca.key.pem -sha256 -days 3650 -out /root/service/key/ca.cert.pem \
+-config /root/service/key/ca-openssl.cnf
+
+sudo openssl x509 -in /root/service/key/ca.cert.pem -text -noout
+
 # Server private key
 sudo openssl genrsa -out /root/service/key/server.key.pem 4096
+
 # CSR(Certificate Signing Request)
-sudo openssl req -new -key /root/service/key/server.key.pem -subj "/C=TW/ST=TAIWAN/O=yowko/CN=localhost" -sha256 -out /root/service/key/server.csr.pem
+sudo openssl req -new -key /root/service/key/server.key.pem \
+  -out /root/service/key/server.csr.pem \
+  -config /root/service/key/server-localhost-openssl.cnf
+
 # Sign to generate server cert
-sudo openssl x509 -req -in /root/service/key/server.csr.pem -CA /root/service/key/ca.cert.pem -CAkey /root/service/key/ca.key.pem -sha256 -days 365 -out /root/service/key/server.cert.pem
+sudo openssl x509 -req \
+  -in /root/service/key/server.csr.pem \
+  -CA /root/service/key/ca.cert.pem \
+  -CAkey /root/service/key/ca.key.pem \
+  -CAcreateserial \
+  -out /root/service/key/server.cert.pem \
+  -days 825 -sha256 \
+  -extfile /root/service/key/server-localhost-openssl.cnf \
+  -extensions v3_req
+
+sudo openssl x509 -in /root/service/key/server.cert.pem -text -noout
+
 # Verify server cert
 sudo openssl verify -CAfile /root/service/key/ca.cert.pem /root/service/key/server.cert.pem
 
@@ -141,6 +228,7 @@ sudo docker compose -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml 
 sudo docker compose --env-file  /root/service/hawkbit/config/rabbitmq.env -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml up -d
 sudo docker container ls
 
+sudo docker exec -it docker-rabbitmq-1 bash
 sudo docker exec -it docker-rabbitmq-1 /bin/sh
 sudo docker inspect docker-rabbitmq-1
 
@@ -250,4 +338,8 @@ rm hawkbit_april.log; sudo journalctl -u hawkbit --since "2025-04-01 00:00:00" -
 sudo journalctl --rotate
 sudo journalctl --vacuum-time=1s
 ```
+
+## Storage
+
+Hawkbit is using the file system by default storage path `./artifactrepo`. This can be changed via property `org.eclipse.hawkbit.repository.file.path`.
 

@@ -213,14 +213,28 @@ sudo docker compose -f docker-compose-deps-mysql.yml up -d
 # 1 time
 sudo docker compose -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml exec rabbitmq env
 sudo docker compose -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml down
-sudo docker compose --env-file  /root/service/hawkbit/config/rabbitmq.env -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml up -d
+sudo docker compose --env-file /root/service/hawkbit/config/rabbitmq.env -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml up -d
 sudo docker container ls
 
 sudo docker exec -it docker-rabbitmq-1 bash
 sudo docker exec -it docker-rabbitmq-1 /bin/sh
 sudo docker inspect docker-rabbitmq-1
 
-openssl s_client -connect rabbitmq-host:5671 -CAfile /root/service/key/ca.cert.pem
+sudo openssl s_client -connect rabbitmq-host:5671 -CAfile /root/service/key/ca.cert.pem
+sudo docker stats
+
+## MySQL
+sudo docker compose -f hawkbit-powerkit/docker/docker-compose-deps-mysql.yml down
+sudo docker compose --env-file /root/service/hawkbit/config/mysql.env -f hawkbit-powerkit/docker/docker-compose-deps-mysql.yml up -d
+sudo docker exec -it docker-mysql-1 bash
+sudo docker exec -it docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit -e "CREATE TABLE IF NOT EXISTS table_user (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100)); INSERT INTO table_user (name) VALUES ('Alice'), ('Bob');"
+sudo docker exec -it docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit -e "SELECT * FROM table_user;"
+sudo docker exec -it docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit -e "DROP TABLE IF EXISTS table_user;"
+
+# Backup
+sudo docker exec docker-mysql-1 mysqldump -u root -pPassw@rd1234 hawkbit | sudo tee /root/service/hawkbit/db/mysql_data_backup/backup-$(date +%F).sql > /dev/null
+# Restore
+sudo bash -c "cat /root/service/hawkbit/db/mysql_data_backup/backup-YYYY-MM-DD.sql | docker exec -i docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit"
 ```
 
 ## Config
@@ -228,9 +242,23 @@ openssl s_client -connect rabbitmq-host:5671 -CAfile /root/service/key/ca.cert.p
 ```bash
 sudo mkdir -p /root/service/hawkbit/config
 sudo vi /root/service/hawkbit/config/application-rabbitmq-prod.properties
+
 # RabbitMQ
 sudo cp hawkbit-powerkit/docker/rabbitmq.env /root/service/hawkbit/config/rabbitmq.env
 sudo vi /root/service/hawkbit/config/rabbitmq.env
+
+# MySQL
+sudo tee /root/service/hawkbit/config/mysql.cnf > /dev/null <<EOF
+[mysqld]
+user=mysql
+default-storage-engine=INNODB
+character-set-server=utf8
+[client]
+default-character-set=utf8
+[mysql]
+default-character-set=utf8
+EOF
+sudo cp hawkbit-powerkit/docker/mysql.env /root/service/hawkbit/config/mysql.env
 ```
 
 ```ini
@@ -262,6 +290,12 @@ spring.rabbitmq.ssl.trust-store-type=JKS
 ABBITMQ_VHOST=/
 RABBITMQ_USER=mgr
 RABBITMQ_PASS=Passw@rd1234
+```
+
+```ini
+# mysql.env
+MYSQL_DATABASE=hawkbit
+MYSQL_ROOT_PASSWORD=Passw@rd1234
 ```
 
 ## Service
@@ -331,4 +365,15 @@ sudo journalctl --vacuum-time=1s
 ## Storage
 
 Hawkbit is using the file system by default storage path `./artifactrepo`. This can be changed via property `org.eclipse.hawkbit.repository.file.path`.
+
+## Database
+
+```bash
+sudo mkdir -p /root/service/hawkbit/db/mysql_data_backup
+sudo rm -R /root/service/hawkbit/db/mysql_data
+
+# Backup
+# cronjob container
+# host cron
+```
 

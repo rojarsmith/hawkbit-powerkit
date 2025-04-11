@@ -1,0 +1,15 @@
+FROM eclipse-temurin:21-jre-alpine
+
+ARG APP_JAR=hawkbit-update-server-0.4.0JAP-SNAPSHOT.jar
+ENV APP_JAR=${APP_JAR}
+
+COPY ./${APP_JAR} ./hawkbit-update-server.jar
+COPY ./mariadb-java-client-3.5.3.jar /opt/lib/
+
+VOLUME "/artifactrepo"
+
+ARG CONTAINER_PORT=8080
+EXPOSE ${CONTAINER_PORT}
+
+ENTRYPOINT ["sh", "-c" , "java -cp hawkbit-update-server.jar:/opt/lib/* org.springframework.boot.loader.JarLauncher ${@}"]
+

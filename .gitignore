@@ -1,1 +1,2 @@
 docker/entry/hawkbit-*.jar
+*-local.bat

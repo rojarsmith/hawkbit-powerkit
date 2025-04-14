@@ -5,10 +5,26 @@ echo ======
 echo Deploy
 echo ======
 
-set /p USER="VPS account: "
-set /p HOST="VPS IP or host name: "
-set /p BOOK=".sh file: "
-set /p SUDO_PASS="SUDO password: "
+if "%~1"=="" (
+    set /p USER="VPS account: "
+) else (
+    set USER=%~1
+)
+if "%~2"=="" (
+    set /p HOST="VPS IP or host name: "
+) else (
+    set HOST=%~2
+)
+if "%~3"=="" (
+    set /p BOOK=".sh file: "
+) else (
+    set BOOK=%~3
+)
+if "%~4"=="" (
+    set /p SUDO_PASS="SUDO password: "
+) else (
+    set SUDO_PASS=%~4
+)
 
 echo %SUDO_PASS%
 

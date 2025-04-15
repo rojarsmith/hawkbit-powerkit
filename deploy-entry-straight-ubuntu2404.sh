@@ -15,6 +15,24 @@ echo "$SUDO_PASS" | sudo -S apt-get -y dist-upgrade
 echo "$SUDO_PASS" | sudo -S apt-get -y autoclean
 echo "$SUDO_PASS" | sudo -S apt-get -y autoremove
 
+# --- MySQL ---
+
+sudo apt-get -y install mariadb-server
+sudo systemctl enable mariadb
+sudo systemctl start mariadb
+
+MYSQL_ROOT_PASSWORD='pa55W@rd'
+
+sudo mysql <<EOF
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+FLUSH PRIVILEGES;
+
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+EOF
+
+echo "Tets MySQL："
+mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT VERSION();"
+
 # --- RabbitMQ ---
 
 echo "$SUDO_PASS" | sudo -S apt-get -y install curl gnupg apt-transport-https

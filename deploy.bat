@@ -26,7 +26,7 @@ if "%~4"=="" (
     set SUDO_PASS=%~4
 )
 
-echo %SUDO_PASS%
+echo SUDO_PASS=%SUDO_PASS%
 
 echo Send to VPS
 scp %BOOK% %USER%@%HOST%:/tmp/%BOOK%

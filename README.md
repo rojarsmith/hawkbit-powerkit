@@ -428,3 +428,8 @@ sudo rm -R /root/service/hawkbit/db/mysql_data
 # host cron
 ```
 
+## ssh-rsa-login
+
+Automatically log in to the remote server and deploy the RSA public key of ssh to log in to ssh without a password from windows.
+
+Copy `ssh-rsa-login-template.bat` to `ssh-rsa-login-local.bat` and then fill in all of the variables.

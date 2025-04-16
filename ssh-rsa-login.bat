@@ -22,7 +22,10 @@ if "%~2"=="" (
 if "%~3"=="" (
     set /p PASS="VPS password: "
 ) else (
-    set PASS=%~3
+    setlocal EnableDelayedExpansion
+    set ARG3=%~3
+    set "PASS=!ARG3!"
+    endlocal & set "PASS=%PASS%"
 )
 
 set PUBKEY=%USERPROFILE%\.ssh\id_rsa.pub
@@ -30,11 +33,11 @@ set SSHEXE=ssh
 set SSHPASSEXE=%~dp0tool\sshpass.exe
 set SCP=scp
 
-echo %USER%@%HOST%
+echo Server=%USER%@%HOST%
 
 echo.
 echo [STEP 1] Build .ssh for VPS
-%SSHPASSEXE% -p "%PASS%" %SSHEXE% %USER%@%HOST% "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
+%SSHPASSEXE% -p "%PASS%" %SSHEXE% -o StrictHostKeyChecking=no %USER%@%HOST% "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
 
 echo.
 echo [STEP 2] Send PUB key to VPS

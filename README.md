@@ -193,13 +193,11 @@ acme.sh --version
 
 # Use Gandi LiveDNS API
 # export GANDI_LIVEDNS_TOKEN="<key>"
-# ./acme.sh --issue --dns dns_gandi_livedns -d example.com -d *.example.com
 
-export GANDI_LIVEDNS_TOKEN="3c4dff14b4947c4b3b40a88ed7c3096faabb822a"
-#RSA #可用的金鑰長度分別為2048, 3072, 4096, 8192
+# RSA, available key length 2048, 3072, 4096, 8192
 acme.sh --issue --dns dns_gandi_livedns --server letsencrypt -d bitdove.net -d *.bitdove.net -k 4096
 
-#ECC/ECDSA #可用的金鑰長度分別為ec-256, ec-384, ec-521
+# ECC/ECDSA, available key length ec-256, ec-384, ec-521
 acme.sh --issue --dns dns_gandi_livedns --server letsencrypt -d bitdove.net -d *.bitdove.net -k ec-384
 
 acme.sh --list
@@ -211,7 +209,6 @@ sudo mkdir -p /etc/letsencrypt/cert/bitdove.net
 sudo mkdir -p /etc/letsencrypt/cert/bitdove.net/ecc
 
 # install nginx
-
 
 #RSA
 acme.sh --install-cert -d bitdove.net \
@@ -230,30 +227,55 @@ acme.sh --install-cert -d bitdove.net --ecc \
 
 acme.sh --upgrade --auto-upgrade
 
-server {
+# Create nginx config
+
+sudo nginx -t
+sudo systemctl reload nginx
+
+# Clear nginx log
+sudo find /var/log/nginx -type f -name "*.log" -exec truncate -s 0 {} +
+
+acme.sh --cron -f
+acme.sh --remove -d <domain>
+acme.sh --remove -d <domain> --ecc
+acme.sh --upgrade --auto-upgrade 0
+acme.sh --register-account -m email@example.com
+acme.sh --help
+
+acme.sh --upgrade
+acme.sh --uninstall
+rm -r ~/.acme.sh
+```
+
+```nginx
+# sudo tee /etc/nginx/sites-available/hawkbit-ssl > /dev/null <<EOF
+server
+{
     listen 80;
     listen [::]:80;
     server_name hawkbit1.bitdove.net;
     return 301 https://hawkbit1.bitdove.net$request_uri;
 }
 
-server {
+server
+{
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name hawkbit1.bitdove.net;
 
-location / {
-         proxy_set_header Host $host;
+    location /
+    {
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto https;
-        
+
         # [error] upstream timed out (110: Connection timed out) while reading upstream, upstream: "http://127.0.0.1:8080/UI/PUSH?v-uiId=1&v-pushId=8cdaae92-19be-4c46-b801-841095dadd90&X-Atmosphere-tracking-id=e00bd557-981f-42ff-85b3-59ec91a5de52&X-Atmosphere-Framework=2.3.2.vaadin2-javascript&X-Atmosphere-Transport=long-polling&X-Atmosphere-TrackMessageSize=true&Content-Type=application%2Fjson%3B%20charset%3DUTF-8&X-atmo-protocol=true&_=1744936903168"
-      proxy_connect_timeout       60s;
-    proxy_send_timeout          600s;
-    proxy_read_timeout          600s;
-    send_timeout                600s;
-       }
-	
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 600s;
+        proxy_read_timeout 600s;
+        send_timeout 600s;
+    }
+
     #RSA
     ssl_certificate /etc/letsencrypt/cert/bitdove.net/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/cert/bitdove.net/private.key;
@@ -271,40 +293,8 @@ location / {
     ssl_stapling_verify on;
     ssl_trusted_certificate /etc/letsencrypt/cert/bitdove.net/chain.pem;
     add_header Strict-Transport-Security "max-age=31536000; preload";
-    
-    # ...
-    
 }
-
-
-        # Add index.php to the list if you are using PHP
-     index index.html index.htm index.nginx-debian.html;
-
-   
-
-       location / {
-               # First attempt to serve request as file, then
-               # as directory, then fall back to displaying a 404.
-               try_files $uri $uri/ =404;
-       }
-
-sudo nginx -t
-
-sudo systemctl reload nginx
-
-# Clear nginx log
-sudo find /var/log/nginx -type f -name "*.log" -exec truncate -s 0 {} +
-
-acme.sh --cron -f
-acme.sh --remove -d <domain>
-acme.sh --remove -d <domain> --ecc
-acme.sh --upgrade --auto-upgrade 0
-acme.sh --register-account -m email@example.com
-acme.sh --help
-
-acme.sh --upgrade
-acme.sh --uninstall
-rm -r ~/.acme.sh
+EOF
 ```
 
 ### Config

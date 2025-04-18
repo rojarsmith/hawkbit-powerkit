@@ -172,6 +172,168 @@ management.ssl.verify     = verify_none
 management.ssl.fail_if_no_peer_cert = false
 ```
 
+### acme.sh
+
+```bash
+git clone https://github.com/acmesh-official/acme.sh.git /tmp/acme.sh
+pushd /tmp/acme.sh
+./acme.sh --install -m rojarsmith@gmail.com
+
+# crontab -e
+# sudo crontab -l
+# 22 10 * * * "/root/.acme.sh"/acme.sh --cron --home "/root/.acme.sh" > /dev/null
+
+source ~/.bashrc
+
+popd
+
+acme.sh --set-default-ca --server letsencrypt
+
+acme.sh --version
+
+# Use Gandi LiveDNS API
+# export GANDI_LIVEDNS_TOKEN="<key>"
+# ./acme.sh --issue --dns dns_gandi_livedns -d example.com -d *.example.com
+
+export GANDI_LIVEDNS_TOKEN="3c4dff14b4947c4b3b40a88ed7c3096faabb822a"
+#RSA #可用的金鑰長度分別為2048, 3072, 4096, 8192
+acme.sh --issue --dns dns_gandi_livedns --server letsencrypt -d bitdove.net -d *.bitdove.net -k 4096
+
+#ECC/ECDSA #可用的金鑰長度分別為ec-256, ec-384, ec-521
+acme.sh --issue --dns dns_gandi_livedns --server letsencrypt -d bitdove.net -d *.bitdove.net -k ec-384
+
+acme.sh --list
+
+#RSA
+sudo mkdir -p /etc/letsencrypt/cert/bitdove.net
+
+#ECC/ECDSA
+sudo mkdir -p /etc/letsencrypt/cert/bitdove.net/ecc
+
+# install nginx
+
+
+#RSA
+acme.sh --install-cert -d bitdove.net \
+--cert-file /etc/letsencrypt/cert/bitdove.net/cert.pem \
+--key-file /etc/letsencrypt/cert/bitdove.net/private.key \
+--fullchain-file /etc/letsencrypt/cert/bitdove.net/fullchain.pem \
+--ca-file /etc/letsencrypt/cert/bitdove.net/chain.pem \
+--reloadcmd "sudo systemctl reload nginx.service"
+
+#ECC/ECDSA
+acme.sh --install-cert -d bitdove.net --ecc \
+--cert-file /etc/letsencrypt/cert/bitdove.net/ecc/cert.pem \
+--key-file /etc/letsencrypt/cert/bitdove.net/ecc/private.key \
+--fullchain-file /etc/letsencrypt/cert/bitdove.net/ecc/fullchain.pem \
+--reloadcmd "sudo systemctl reload nginx.service"
+
+acme.sh --upgrade --auto-upgrade
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name hawkbit1.bitdove.net;
+    return 301 https://hawkbit1.bitdove.net$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name hawkbit1.bitdove.net;
+
+location / {
+         proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        
+        # [error] upstream timed out (110: Connection timed out) while reading upstream, upstream: "http://127.0.0.1:8080/UI/PUSH?v-uiId=1&v-pushId=8cdaae92-19be-4c46-b801-841095dadd90&X-Atmosphere-tracking-id=e00bd557-981f-42ff-85b3-59ec91a5de52&X-Atmosphere-Framework=2.3.2.vaadin2-javascript&X-Atmosphere-Transport=long-polling&X-Atmosphere-TrackMessageSize=true&Content-Type=application%2Fjson%3B%20charset%3DUTF-8&X-atmo-protocol=true&_=1744936903168"
+      proxy_connect_timeout       60s;
+    proxy_send_timeout          600s;
+    proxy_read_timeout          600s;
+    send_timeout                600s;
+       }
+	
+    #RSA
+    ssl_certificate /etc/letsencrypt/cert/bitdove.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/cert/bitdove.net/private.key;
+    #ECC/ECDSA
+    ssl_certificate /etc/letsencrypt/cert/bitdove.net/ecc/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/cert/bitdove.net/ecc/private.key;
+    ssl_ecdh_curve X25519:secp384r1;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_timeout 1440m;
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-128-GCM-SHA256:TLS13-AES-128-CCM-8-SHA256:TLS13-AES-128-CCM-SHA256:EECDH+CHACHA20:EECDH+CHACHA20-draft:EECDH+ECDSA+AES128:EECDH+aRSA+AES128:RSA+AES128:EECDH+ECDSA+AES256:EECDH+aRSA+AES256:RSA+AES256:EECDH+ECDSA+3DES:EECDH+aRSA+3DES:RSA+3DES:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    ssl_trusted_certificate /etc/letsencrypt/cert/bitdove.net/chain.pem;
+    add_header Strict-Transport-Security "max-age=31536000; preload";
+    
+    # ...
+    
+}
+
+
+        # Add index.php to the list if you are using PHP
+     index index.html index.htm index.nginx-debian.html;
+
+   
+
+       location / {
+               # First attempt to serve request as file, then
+               # as directory, then fall back to displaying a 404.
+               try_files $uri $uri/ =404;
+       }
+
+sudo nginx -t
+
+sudo systemctl reload nginx
+
+# Clear nginx log
+sudo find /var/log/nginx -type f -name "*.log" -exec truncate -s 0 {} +
+
+acme.sh --cron -f
+acme.sh --remove -d <domain>
+acme.sh --remove -d <domain> --ecc
+acme.sh --upgrade --auto-upgrade 0
+acme.sh --register-account -m email@example.com
+acme.sh --help
+
+acme.sh --upgrade
+acme.sh --uninstall
+rm -r ~/.acme.sh
+```
+
+### Config
+
+```bash
+sudo sed -i '/^ExecStart=.*application-mysql,application-rabbitmq$/ {N; s/application-mysql,application-rabbitmq\nSuccessExitStatus=143/application-ssl,application-mysql,application-rabbitmq\nSuccessExitStatus=143/ }' /etc/systemd/system/hawkbit.service
+
+sudo vi /opt/hawkbit/config/application-prod.properties
+```
+
+```ini
+# /opt/hawkbit/config/application-ssl-prod.properties
+
+server.forward-headers-strategy=native
+
+## Configuration for building download URLs - START
+hawkbit.artifact.url.protocols.download-http.rel=downloadHttp
+hawkbit.artifact.url.protocols.download-http.protocol=https
+hawkbit.artifact.url.protocols.download-http.supports=DMF,DDI
+hawkbit.artifact.url.protocols.download-http.hostname=hawkbit1.bitdove.net
+hawkbit.artifact.url.protocols.download-http.ref={protocol}://{hostname}/{tenant}/controller/v1/{controllerId}/softwaremodules/{softwareModuleId}/artifacts/{artifactFileName}
+hawkbit.artifact.url.protocols.md5sum-http.rel=md5sumHttp
+hawkbit.artifact.url.protocols.md5sum-http.protocol=${hawkbit.artifact.url.protocols.download-http.protocol}
+hawkbit.artifact.url.protocols.md5sum-http.supports=DDI
+hawkbit.artifact.url.protocols.md5sum-http.hostname=${hawkbit.artifact.url.protocols.download-http.hostname}
+hawkbit.artifact.url.protocols.md5sum-http.ref=${hawkbit.artifact.url.protocols.download-http.ref}.MD5SUM
+## Configuration for building download URLs - END
+```
+
 ## Build
 
 ### 0.8.0
@@ -433,3 +595,12 @@ sudo rm -R /root/service/hawkbit/db/mysql_data
 Automatically log in to the remote server and deploy the RSA public key of ssh to log in to ssh without a password from windows.
 
 Copy `ssh-rsa-login-template.bat` to `ssh-rsa-login-local.bat` and then fill in all of the variables.
+
+## DNS
+
+```shell
+# Smart phone DNS broken
+nslookup hawkbit1.bitdove.net
+nslookup hawkbit1.bitdove.net ns-39-a.gandi.net
+```
+

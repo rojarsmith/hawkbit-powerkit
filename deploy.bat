@@ -26,13 +26,24 @@ if "%~4"=="" (
     set SUDO_PASS=%~4
 )
 
+set REMAINING_PARAMS=
+set INDEX=5
+:loop
+call set ARG=%%%INDEX%%%
+if defined ARG (
+    set REMAINING_PARAMS=!REMAINING_PARAMS! !ARG!
+    set /a INDEX+=1
+    goto loop
+)
+
 echo SUDO_PASS=%SUDO_PASS%
+echo REMAINING_PARAMS=!REMAINING_PARAMS!
 
 echo Send to VPS
 scp %BOOK% %USER%@%HOST%:/tmp/%BOOK%
 
 echo Run .sh
-ssh %USER%@%HOST% "bash /tmp/%BOOK% !SUDO_PASS!"
+ssh %USER%@%HOST% "bash /tmp/%BOOK% !SUDO_PASS! !REMAINING_PARAMS!"
 
 echo.
 pause

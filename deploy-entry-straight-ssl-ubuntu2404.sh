@@ -72,7 +72,7 @@ if [ -f "/etc/nginx/sites-available/default" ]; then
     rm -f /etc/nginx/sites-available/default
 fi
 
-NGINX_CONFIG=hawkbit-ssl
+NGINX_CONFIG=hawkbit-ssl.nginx
 echo "Checking: /etc/nginx/sites-enabled/$NGINX_CONFIG"
 ls -l "/etc/nginx/sites-enabled/$NGINX_CONFIG"
 if [ -L "/etc/nginx/sites-enabled/$NGINX_CONFIG" ]; then

@@ -5,21 +5,205 @@
 ### ubuntu 24.04
 
 ```bash
+# Enable login ssh with root
+sudo passwd root
+sudo sed -i '/^#\?PermitRootLogin /c\PermitRootLogin yes' /etc/ssh/sshd_config || echo 'PermitRootLogin yes' | sudo tee -a /etc/ssh/sshd_config
+sudo sed -i '/^#\?PasswordAuthentication /c\PasswordAuthentication yes' /etc/ssh/sshd_config || echo 'PasswordAuthentication yes' | sudo tee -a /etc/ssh/sshd_config
+sudo systemctl daemon-reload
+sudo systemctl restart ssh
+
+# Build with non root.
+
 # OpenJDK
 apt search openjdk | grep -E 'openjdk-.*-jdk/'
 sudo apt install -y openjdk-21-jdk
-sudo apt install -y git maven curl
+sudo apt install -y curl git maven tree
 
-# Service
-sudo mkdir -p /root/service/hawkbit/config
-sudo tree -d /root/service/hawkbit
+# For systemctl
+sudo mkdir -p /opt/hawkbit/config
+sudo mkdir -p /opt/hawkbit/lib
+sudo tree -d /opt/hawkbit
 
-# Build
-cd ~
-mkdir hawkbit; cd hawkbit
-mkdir config
-
+# For build
+cd ~; mkdir -p hawkbit/config; cd hawkbit
 git clone https://github.com/rojarsmith/hawkbit-powerkit.git
+
+# Hawkbit version
+HBT_VER=0.8.0
+```
+
+## Build
+
+```bash
+cd ~/hawkbit
+mkdir -p binary-official/hawkbit-$HBT_VER
+mkdir source-official; cd source-official
+wget https://github.com/rojarsmith/hawkbit/archive/refs/tags/$HBT_VER.tar.gz \
+-O hawkbit-$HBT_VER.tar.gz
+tar -xzvf hawkbit-$HBT_VER.tar.gz
+cd hawkbit-$HBT_VER
+
+# Compile
+for i in {1..10}; do mvn -T$(nproc) clean install -DskipTests && break || echo "Build $i times failed, try again..."; done
+
+# OR
+mvn -T$(nproc) clean install -DskipTests
+
+# If multiple errors occur during the compilation process, it may be caused by unstable network disconnection and failure to download all dependencies. It is difficult to see the error by looking at the error code alone. Just execute the same compilation several times.
+
+# find . -type f -name 'hawkbit-update-server*' -exec cp {} ../../binary-official/hawkbit-$HBT_VER \;
+find . -type f -name 'hawkbit-*.jar' -exec cp {} ../../binary-official/hawkbit-$HBT_VER \;
+
+cd ~/hawkbit
+
+# --- Fast execute ---
+
+cd ~/hawkbit
+java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar  --hawkbit.dmf.rabbitmq.enabled=false
+
+java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.location=/opt/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application-mysql,application-rabbitmq
+
+## Port: 8088
+java -jar binary-official/hawkbit-$HBT_VER/hawkbit-simple-ui-0-SNAPSHOT.jar
+```
+
+## Config
+
+```bash
+sudo mkdir -p /opt/hawkbit/config
+
+sudo tee /opt/hawkbit/config/application-prod.properties > /dev/null <<EOF
+# application-prod.properties
+spring.main.allow-bean-definition-overriding=true
+
+# Only listen localhost, default is 0.0.0.0
+# server.address=127.0.0.1
+EOF
+sudo cat /opt/hawkbit/config/application-prod.properties
+
+sudo tee /opt/hawkbit/config/application-mysq-prod.properties > /dev/null <<EOF
+# application-mysql-prod.properties
+spring.jpa.database=MYSQL
+spring.datasource.url=jdbc:mariadb://localhost:3306/hawkbit
+spring.datasource.username=root
+spring.datasource.password=Passw@rd1234
+spring.datasource.driverClassName=org.mariadb.jdbc.Driver
+#spring.datasource.sql-script-encoding=utf-8
+#spring.datasource.continue-on-error=false
+#spring.datasource.separator=;
+EOF
+sudo cat /opt/hawkbit/config/application-mysq-prod.properties
+
+sudo tee /opt/hawkbit/config/application-rabbitmq-prod.properties > /dev/null <<EOF
+# application-rabbitmq-prod.properties
+spring.rabbitmq.username=mgr
+spring.rabbitmq.password=Passw@rd1234
+spring.rabbitmq.virtual-host=/
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+# spring.rabbitmq.port=5671 # SSL 
+
+spring.rabbitmq.ssl.enabled=true
+#spring.rabbitmq.ssl.verify-hostname=false
+#spring.rabbitmq.ssl.validate-server-certificate=false
+
+# mutual TLS (optional)
+#spring.rabbitmq.ssl.key-store=file:/root/service/key/cert.p12
+#spring.rabbitmq.ssl.key-store-password=keystorepass123
+#spring.rabbitmq.ssl.key-store-type=PKCS12
+
+# CA
+#spring.rabbitmq.ssl.trust-store=file:/root/service/key/truststore.jks
+#spring.rabbitmq.ssl.trust-store-password=truststorepass123
+#spring.rabbitmq.ssl.trust-store-type=JKS
+EOF
+sudo cat /opt/hawkbit/config/application-rabbitmq-prod.properties
+
+# --- For Docker ---
+
+## MySQL
+
+### mysql.cnf
+sudo tee /opt/hawkbit/config/mysql.cnf > /dev/null <<EOF
+[mysqld]
+user=mysql
+default-storage-engine=INNODB
+character-set-server=utf8
+[client]
+default-character-set=utf8
+[mysql]
+default-character-set=utf8
+EOF
+
+### mysql.env
+sudo tee /opt/hawkbit/config/mysql.env > /dev/null <<EOF
+MYSQL_DATABASE=hawkbit
+MYSQL_ROOT_PASSWORD=Passw@rd1234
+EOF
+
+### OR
+sudo cp hawkbit-powerkit/docker/mysql.env /opt/hawkbit/config/mysql.env
+sudo vi /opt/hawkbit/config/mysql.env
+
+## RabbitMQ
+
+### rabbitmq.env
+sudo tee /opt/hawkbit/config/mysql.env > /dev/null <<EOF
+ABBITMQ_VHOST=/
+RABBITMQ_USER=mgr
+RABBITMQ_PASS=Passw@rd1234
+EOF
+
+### OR
+sudo cp hawkbit-powerkit/docker/rabbitmq.env /opt/hawkbit/config/rabbitmq.env
+sudo vi /opt/hawkbit/config/rabbitmq.env
+```
+
+## Service
+
+```bash
+cd ~/hawkbit
+sudo cp binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar /opt/hawkbit/hawkbit-update-server.jar
+sudo chown -R root:root /opt/hawkbit
+
+sudo tee /etc/systemd/system/hawkbit.service > /dev/null <<EOF
+# /etc/systemd/system/hawkbit.service
+[Unit]
+Description=Hawkbit
+After=network.target
+
+[Service]
+User=root
+ExecStart=/usr/bin/java -jar /opt/hawkbit/hawkbit-update-server.jar --spring.config.location=/opt/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application,application-mysql,application-rabbitmq
+# ExecStart=/usr/bin/java -cp "/opt/hawkbit/lib/*:/opt/hawkbit/hawkbit-update-server.jar" org.springframework.boot.loader.JarLauncher --spring.config.location=/opt/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application,application-mysql,application-rabbitmq
+# ExecStart=/usr/bin/java -Djavax.net.debug=ssl,handshake -jar /opt/hawkbit/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.name=application-rabbitmq --spring.config.location=/opt/hawkbit/config/ --spring.profiles.active=prod # Debug SSL
+SuccessExitStatus=143
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hawkbit
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo cat /etc/systemd/system/hawkbit.service
+
+sudo systemctl daemon-reexec
+sudo systemctl start hawkbit
+sudo systemctl enable hawkbit # Auto start
+sudo systemctl stop hawkbit
+sudo systemctl daemon-reload
+sudo systemctl restart hawkbit
+sudo systemctl status hawkbit
+sudo systemctl | more
+sudo systemctl | grep "hawkbit"
+sudo systemctl list-units --type=service
+# active
+sudo systemctl is-active hawkbit
+
+# http://localhost:8080
 ```
 
 ## SSL/TLS
@@ -142,8 +326,8 @@ sudo keytool -delete \
   -keystore /root/service/key/truststore.jks \
   -storepass truststorepass123
   
-sudo touch /root/service/hawkbit/config/rabbitmq.conf
-sudo vi /root/service/hawkbit/config/rabbitmq.conf
+sudo touch /opt/hawkbit/config/rabbitmq.conf
+sudo vi /opt/hawkbit/config/rabbitmq.conf
 
 sudo openssl s_client -connect localhost:5671 -CAfile /root/service/key/ca.cert.pem
 sudo openssl s_client -connect localhost:5671 -cert /root/service/key/client.cert.pem \
@@ -231,9 +415,6 @@ acme.sh --upgrade --auto-upgrade
 
 sudo nginx -t
 sudo systemctl reload nginx
-
-# Clear nginx log
-sudo find /var/log/nginx -type f -name "*.log" -exec truncate -s 0 {} +
 
 acme.sh --cron -f
 acme.sh --remove -d <domain>
@@ -324,43 +505,6 @@ hawkbit.artifact.url.protocols.md5sum-http.ref=${hawkbit.artifact.url.protocols.
 ## Configuration for building download URLs - END
 ```
 
-## Build
-
-### 0.8.0
-
-```bash
-mkdir -p binary-official/hawkbit-0.8.0
-mkdir source-official; cd source-official
-wget https://github.com/rojarsmith/hawkbit/archive/refs/tags/0.8.0.tar.gz \
--O hawkbit-0.8.0.tar.gz
-tar -xzvf hawkbit-0.8.0.tar.gz
-cd hawkbit-0.8.0
-
-# Compile
-for i in {1..10}; do mvn -T$(nproc) clean install -DskipTests && break || echo "Build $i times failed, try again..."; done
-
-# OR
-mvn -T$(nproc) clean install -DskipTests
-
-# If multiple errors occur during the compilation process, it may be caused by unstable network disconnection and failure to download all dependencies. It is difficult to see the error by looking at the error code alone. Just execute the same compilation several times.
-
-find . -type f -name 'hawkbit-*.jar*' -exec cp {} ../../binary-official/hawkbit-0.8.0 \;
-```
-
-## Fast Run
-
-```bash
-cd ~/hawkbit
-java -jar binary-official/hawkbit-0.8.0/hawkbit-update-server-0-SNAPSHOT.jar  --hawkbit.dmf.rabbitmq.enabled=false
-
-java -jar binary-official/hawkbit-0.8.0/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.location=/root/service/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application-mysql,application-rabbitmq
-
-# Port: 8088
-java -jar binary-official/hawkbit-0.8.0/hawkbit-simple-ui-0-SNAPSHOT.jar
-
-sudo docker compose -f docker-compose-deps-mysql.yml up -d
-```
-
 ## Docker
 
 ```bash
@@ -368,7 +512,7 @@ sudo docker compose -f docker-compose-deps-mysql.yml up -d
 # 1 time
 sudo docker compose -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml exec rabbitmq env
 sudo docker compose -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml down
-sudo docker compose --env-file /root/service/hawkbit/config/rabbitmq.env -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml up -d
+sudo docker compose --env-file /opt/hawkbit/config/rabbitmq.env -f hawkbit-powerkit/docker/docker-compose-deps-rabbitmq.yml up -d
 sudo docker container ls
 
 sudo docker exec -it docker-rabbitmq-1 bash
@@ -380,16 +524,16 @@ sudo docker stats
 
 ## MySQL
 sudo docker compose -f hawkbit-powerkit/docker/docker-compose-deps-mysql.yml down
-sudo docker compose --env-file /root/service/hawkbit/config/mysql.env -f hawkbit-powerkit/docker/docker-compose-deps-mysql.yml up -d
+sudo docker compose --env-file /opt/hawkbit/config/mysql.env -f hawkbit-powerkit/docker/docker-compose-deps-mysql.yml up -d
 sudo docker exec -it docker-mysql-1 bash
 sudo docker exec -it docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit -e "CREATE TABLE IF NOT EXISTS table_user (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100)); INSERT INTO table_user (name) VALUES ('Alice'), ('Bob');"
 sudo docker exec -it docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit -e "SELECT * FROM table_user;"
 sudo docker exec -it docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit -e "DROP TABLE IF EXISTS table_user;"
 
 # Backup
-sudo docker exec docker-mysql-1 mysqldump -u root -pPassw@rd1234 hawkbit | sudo tee /root/service/hawkbit/db/mysql_data_backup/backup-$(date +%F).sql > /dev/null
+sudo docker exec docker-mysql-1 mysqldump -u root -pPassw@rd1234 hawkbit | sudo tee /opt/hawkbit/db/mysql_data_backup/backup-$(date +%F).sql > /dev/null
 # Restore
-sudo bash -c "cat /root/service/hawkbit/db/mysql_data_backup/backup-YYYY-MM-DD.sql | docker exec -i docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit"
+sudo bash -c "cat /opt/hawkbit/db/mysql_data_backup/backup-YYYY-MM-DD.sql | docker exec -i docker-mysql-1 mysql -u root -pPassw@rd1234 hawkbit"
 
 # Hawkbit
 mkdir ~/hawkbit/binary-mod # put in mod jar
@@ -405,8 +549,8 @@ popd
 
 jar tf hawkbit-update-server-0.4.0JAP-SNAPSHOT.jar
 
-sudo vi /root/service/hawkbit/config/application-mysql-docker-prod.properties
-sudo vi /root/service/hawkbit/config/application-rabbitmq-docker-prod.properties
+sudo vi /opt/hawkbit/config/application-mysql-docker-prod.properties
+sudo vi /opt/hawkbit/config/application-rabbitmq-docker-prod.properties
 
 cd ~/hawkbit/hawkbit-powerkit/docker
 sudo docker compose -f hawkbit-powerkit/docker/docker-compose-hawkbit.yml down
@@ -414,134 +558,6 @@ sudo docker compose -f hawkbit-powerkit/docker/docker-compose-hawkbit.yml up
 
 sudo chmod -R 777 ../binary-official/hawkbit-0.8.0/hawkbit-update-server-0-SNAPSHOT.jar
 cp ../binary-official/hawkbit-0.8.0/hawkbit-update-server-0-SNAPSHOT.jar ./docker/hawkbit-update-server-SNAPSHOT.jar
-```
-
-## Config
-
-```bash
-sudo mkdir -p /root/service/hawkbit/config
-sudo vi /root/service/hawkbit/config/application-prod.properties
-sudo vi /root/service/hawkbit/config/application-rabbitmq-prod.properties
-sudo vi /root/service/hawkbit/config/application-mysq-prod.properties
-
-# RabbitMQ
-sudo cp hawkbit-powerkit/docker/rabbitmq.env /root/service/hawkbit/config/rabbitmq.env
-sudo vi /root/service/hawkbit/config/rabbitmq.env
-
-# MySQL
-sudo tee /root/service/hawkbit/config/mysql.cnf > /dev/null <<EOF
-[mysqld]
-user=mysql
-default-storage-engine=INNODB
-character-set-server=utf8
-[client]
-default-character-set=utf8
-[mysql]
-default-character-set=utf8
-EOF
-sudo cp hawkbit-powerkit/docker/mysql.env /root/service/hawkbit/config/mysql.env
-```
-
-```bash
-# application-prod.properties
-spring.main.allow-bean-definition-overriding=true
-```
-
-```ini
-# application-mysql-prod.properties
-spring.jpa.database=MYSQL
-spring.datasource.url=jdbc:mariadb://localhost:3306/hawkbit
-spring.datasource.username=root
-spring.datasource.password=Passw@rd1234
-spring.datasource.driverClassName=org.mariadb.jdbc.Driver
-#spring.datasource.sql-script-encoding=utf-8
-#spring.datasource.continue-on-error=false
-#spring.datasource.separator=;
-```
-
-```ini
-# application-rabbitmq-prod.properties
-spring.rabbitmq.username=mgr
-spring.rabbitmq.password=Passw@rd1234
-spring.rabbitmq.virtual-host=/
-spring.rabbitmq.host=localhost
-spring.rabbitmq.port=5672
-# spring.rabbitmq.port=5671 # SSL 
-
-spring.rabbitmq.ssl.enabled=true
-#spring.rabbitmq.ssl.verify-hostname=false
-#spring.rabbitmq.ssl.validate-server-certificate=false
-
-# mutual TLS (optional)
-#spring.rabbitmq.ssl.key-store=file:/root/service/key/cert.p12
-#spring.rabbitmq.ssl.key-store-password=keystorepass123
-#spring.rabbitmq.ssl.key-store-type=PKCS12
-
-# CA
-#spring.rabbitmq.ssl.trust-store=file:/root/service/key/truststore.jks
-#spring.rabbitmq.ssl.trust-store-password=truststorepass123
-#spring.rabbitmq.ssl.trust-store-type=JKS
-```
-
-```ini
-# rabbitmq.env
-ABBITMQ_VHOST=/
-RABBITMQ_USER=mgr
-RABBITMQ_PASS=Passw@rd1234
-```
-
-```ini
-# mysql.env
-MYSQL_DATABASE=hawkbit
-MYSQL_ROOT_PASSWORD=Passw@rd1234
-```
-
-## Service
-
-```bash
-cd ~/hawkbit
-sudo mkdir /root/service/hawkbit/bin
-sudo cp binary-official/hawkbit-0.8.0/hawkbit-update-server-0-SNAPSHOT.jar /root/service/hawkbit/bin
-
-sudo touch /etc/systemd/system/hawkbit.service
-sudo vi /etc/systemd/system/hawkbit.service
-
-sudo systemctl daemon-reexec
-sudo systemctl start hawkbit
-sudo systemctl enable hawkbit # Auto start
-sudo systemctl stop hawkbit
-sudo systemctl daemon-reload
-sudo systemctl restart hawkbit
-sudo systemctl status hawkbit
-sudo systemctl | more
-sudo systemctl | grep "hawkbit"
-sudo systemctl list-units --type=service
-# active
-sudo systemctl is-active hawkbit
-
-# http://localhost:8080
-```
-
-```ini
-# /etc/systemd/system/hawkbit.service
-[Unit]
-Description=Hawkbit
-After=network.target
-
-[Service]
-User=root
-ExecStart=/usr/bin/java  -jar /root/service/hawkbit/bin/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.location=/root/service/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application,application-mysql,application-rabbitmq
-# ExecStart=/usr/bin/java -cp "/opt/hawkbit/lib/*:/opt/hawkbit/hawkbit-update-server.jar" org.springframework.boot.loader.JarLauncher --spring.config.location=/root/service/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application,application-mysql,application-rabbitmq
-# ExecStart=/usr/bin/java -Djavax.net.debug=ssl,handshake -jar /root/service/hawkbit/bin/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.name=application-rabbitmq --spring.config.location=/root/service/hawkbit/config/ --spring.profiles.active=prod # Debug SSL
-SuccessExitStatus=143
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=hawkbit
-
-[Install]
-WantedBy=multi-user.target
 ```
 
 ## Log
@@ -559,6 +575,26 @@ rm hawkbit_april.log; sudo journalctl -u hawkbit --since "2025-04-01 00:00:00" -
 # Clean all
 sudo journalctl --rotate
 sudo journalctl --vacuum-time=1s
+
+# Clear nginx log
+sudo find /var/log/nginx -type f -name "*.log" -exec truncate -s 0 {} +
+
+# List IP
+sudo awk '{print $1}' /var/log/nginx/access_with_body.log | sort | uniq -c | sort -nr | head
+
+# nginx sites-available
+location /
+{
+    access_log /var/log/nginx/access_with_body.log log_with_body;
+}
+
+# nginx.conf
+http {
+    log_format log_with_body 
+        '$remote_addr - $remote_user [$time_local] "$request"'
+        '$status $body_bytes_sent "$http_referer"'
+        '"$http_user_agent" "$request_body"';
+}
 ```
 
 ## Storage
@@ -566,14 +602,14 @@ sudo journalctl --vacuum-time=1s
 Hawkbit is using the file system by default storage path `./artifactrepo`. This can be changed via property `org.eclipse.hawkbit.repository.file.path`.
 
 ```bash
-sudo mkdir -p /root/service/hawkbit/artifact
+sudo mkdir -p /opt/hawkbit/artifact
 ```
 
 ## Database
 
 ```bash
-sudo mkdir -p /root/service/hawkbit/db/mysql_data_backup
-sudo rm -R /root/service/hawkbit/db/mysql_data
+sudo mkdir -p /opt/hawkbit/db/mysql_data_backup
+sudo rm -R /opt/hawkbit/db/mysql_data
 
 # Backup
 # cronjob container
@@ -606,7 +642,9 @@ nslookup hawkbit1.bitdove.net ns-39-a.gandi.net
 # ssh-rsa-login-*-local.bat
 # dns-*-local.bat
 # deploy-entry-straight-ubuntu2404-*-local.bat
+# Check http://DOMAIN:8080
 # deploy-entry-straight-ssl-ubuntu2404-*-local.bat
+# Check https://DOMAIN
 ```
 
 ## Miscellaneous

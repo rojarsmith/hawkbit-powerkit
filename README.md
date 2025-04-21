@@ -594,3 +594,37 @@ nslookup hawkbit1.bitdove.net
 nslookup hawkbit1.bitdove.net ns-39-a.gandi.net
 ```
 
+## Deployer
+
+### Entry Straight
+
+#### Ubuntu 24.04
+
+```shell
+# At Windows:
+# Create VPS / server
+# ssh-rsa-login-*-local.bat
+# dns-*-local.bat
+# deploy-entry-straight-ubuntu2404-*-local.bat
+# deploy-entry-straight-ssl-ubuntu2404-*-local.bat
+```
+
+## Miscellaneous
+
+Escape character of .bat: % -> %%
+
+### Snapshot & Restore
+
+```bash
+sudo apt install timeshift
+sudo timeshift --setup
+sudo timeshift --create
+sudo timeshift --create --comments "Before installing xyz"
+sudo timeshift --list
+sudo timeshift --restore
+sudo timeshift --delete --snapshot '2025-04-17_10-23-01'
+sudo timeshift --delete --snapshot '0'
+sudo systemctl enable --now timeshift.timer
+sudo timeshift-launcher
+```
+

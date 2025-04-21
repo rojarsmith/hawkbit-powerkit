@@ -63,23 +63,27 @@ acme.sh --upgrade --auto-upgrade
 
 # --- Nginx 2 ---
 
+if [ -L "/etc/nginx/sites-enabled/default" ]; then
+    echo "The default sites-enabled exists. Deleting..."
+    rm -f /etc/nginx/sites-enabled/default
+fi
 if [ -f "/etc/nginx/sites-available/default" ]; then
     echo "The default sites-available exists. Deleting..."
     rm -f /etc/nginx/sites-available/default
 fi
-if [ -d "/etc/nginx/sites-enabled/default" ]; then
-    echo "The default sites-enabled exists. Deleting..."
-    rm -f /etc/nginx/sites-enabled/default
-fi
 
 NGINX_CONFIG=hawkbit-ssl
-if [ -f "/etc/nginx/sites-available/$NGINX_CONFIG" ]; then
-    echo "The $NGINX_CONFIG sites-available exists. Deleting..."
-    rm -f /etc/nginx/sites-available/$NGINX_CONFIG
-fi
+echo "Checking: /etc/nginx/sites-enabled/$NGINX_CONFIG"
+ls -l "/etc/nginx/sites-enabled/$NGINX_CONFIG"
 if [ -L "/etc/nginx/sites-enabled/$NGINX_CONFIG" ]; then
     echo "The $NGINX_CONFIG sites-enabled exists. Deleting..."
     rm -f /etc/nginx/sites-enabled/$NGINX_CONFIG
+fi
+echo "Checking: /etc/nginx/sites-available/$NGINX_CONFIG"
+ls -l "/etc/nginx/sites-available/$NGINX_CONFIG"
+if [ -f "/etc/nginx/sites-available/$NGINX_CONFIG" ]; then
+    echo "The $NGINX_CONFIG sites-available exists. Deleting..."
+    rm -f /etc/nginx/sites-available/$NGINX_CONFIG
 fi
 sudo tee /etc/nginx/sites-available/$NGINX_CONFIG > /dev/null <<EOF
 server
@@ -133,3 +137,5 @@ EOF
 sudo ln -s /etc/nginx/sites-available/$NGINX_CONFIG /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
+
+sudo reboot

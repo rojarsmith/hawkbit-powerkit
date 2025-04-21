@@ -34,7 +34,7 @@ FLUSH PRIVILEGES;
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
 EOF
 
-    echo "Tets MySQL："
+    echo "Tets MySQL:"
     mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT VERSION();"
     mysql -u root -p${MYSQL_ROOT_PASSWORD} -e \
         "CREATE DATABASE IF NOT EXISTS hawkbit CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"

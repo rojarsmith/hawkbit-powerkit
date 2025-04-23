@@ -1,0 +1,21 @@
+services:
+  nginx-ssl:
+    image: "nginx-ssl:1.27.5"
+    environment:
+      - SSL_DOMAINS=${SSL_DOMAINS}
+      - SSL_SERVER=${SSL_SERVER}
+      - EMAIL=${EMAIL}
+      - DNS=${DNS} 
+      - API_KEY=${API_KEY}
+    restart: always
+    volumes:
+      - /root/nginx-ssl/cert/home:/acmesh_cert
+      - /root/nginx-ssl/cert/ssl:/etc/nginx/ssl  
+      - /root/nginx-ssl/config:/etc/nginx/conf.d
+      - /root/nginx-ssl/html:/usr/share/nginx/html 
+    ports:
+      - 80:80
+      - 443:443
+    labels:
+      name: "nginx-ssl"
+

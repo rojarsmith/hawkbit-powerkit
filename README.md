@@ -558,6 +558,47 @@ sudo docker compose -f hawkbit-powerkit/docker/docker-compose-hawkbit.yml up
 
 sudo chmod -R 777 ../binary-official/hawkbit-0.8.0/hawkbit-update-server-0-SNAPSHOT.jar
 cp ../binary-official/hawkbit-0.8.0/hawkbit-update-server-0-SNAPSHOT.jar ./docker/hawkbit-update-server-SNAPSHOT.jar
+
+# Nginx
+
+## Need home and install 2 type path for SSL certification
+
+sudo docker compose --env-file nginx-ssl.env -f docker-compose-deps-nginx-ssl.yml up
+sudo docker compose --env-file nginx-ssl.env -f docker-compose-deps-nginx-ssl.yml down
+
+# Debug
+
+sudo docker run -it --env-file nginx-ssl.env -v "/home/mgr/hawkbit/nginx-ssl/ssl:/acmesh_cert" -v "/home/mgr/hawkbit/nginx-ssl/config:/etc/nginx/conf.d" --rm nginx-ssl:1.27.5 sh
+
+docker run -d -p 80:80 -p 443:443 -v "/data/web":/data/web \
+    -v "/opt/hawkbit/nginx-ssl/cert/home":/acmesh_cert \
+    -v "/opt/hawkbit/nginx-ssl/cert/ssl":/etc/nginx/ssl \
+    -v "/opt/hawkbit/nginx-ssl/config":/etc/nginx/conf.d \
+    -v "/opt/hawkbit/nginx/sslacme_cert":/acme_cert \
+    -e SslDomains="example.com;www.example.com;test.example.com" \
+    -e SslServer="zerossl" \
+    -e mail="youmail@example.com" \
+    --name nginx nginx-ssl:latest
+
+sudo docker pull nginx:1.27.5-alpine
+sudo docker run -it --rm nginx:1.27.5-alpine sh
+
+/ # ls -l /etc/nginx
+total 32
+drwxr-xr-x    2 root     root          4096 Apr 16 17:01 conf.d
+-rw-r--r--    1 root     root          1077 Apr 16 12:55 fastcgi.conf
+-rw-r--r--    1 root     root          1007 Apr 16 12:55 fastcgi_params
+-rw-r--r--    1 root     root          5349 Apr 16 12:55 mime.types
+lrwxrwxrwx    1 root     root            22 Apr 16 17:01 modules -> /usr/lib/nginx/modules
+-rw-r--r--    1 root     root           644 Apr 16 12:55 nginx.conf
+-rw-r--r--    1 root     root           636 Apr 16 12:55 scgi_params
+-rw-r--r--    1 root     root           664 Apr 16 12:55 uwsgi_params
+/ # nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+/ # ls -l /etc/nginx/conf.d/
+total 4
+-rw-r--r--    1 root     root          1072 Apr 16 12:55 default.conf
 ```
 
 ## Log
@@ -645,6 +686,9 @@ nslookup hawkbit1.bitdove.net ns-39-a.gandi.net
 # Check http://DOMAIN:8080
 # deploy-entry-straight-ssl-ubuntu2404-*-local.bat
 # Check https://DOMAIN
+
+# Docker
+
 ```
 
 ## Miscellaneous

@@ -1,0 +1,6 @@
+hawkbit.domain=
+hawkbit.username=
+hawkbit.password=
+hawkbit.gateway-security-token=
+hawkbit.device-target-id=
+hawkbit.device-security-token=

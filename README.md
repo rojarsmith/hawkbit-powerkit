@@ -693,7 +693,20 @@ nslookup hawkbit1.bitdove.net ns-39-a.gandi.net
 
 ## Miscellaneous
 
-Escape character of .bat: % -> %%
+### 0.10.0 Migration
+
+#### Create Target Filter
+
+Targets -> Toggle Search
+
+Example:
+    Raw Filter: name==dev*
+
+"Target Filter Queries" only can query target filter.
+
+### Escape character
+
+of .bat: % -> %%
 
 ### Snapshot & Restore
 

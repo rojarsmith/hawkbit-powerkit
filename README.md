@@ -69,6 +69,8 @@ mvn -T$(nproc) clean install -DskipTests
 
 # find . -type f -name 'hawkbit-update-server*' -exec cp {} ../../binary-official/hawkbit-$HBT_VER \;
 find . -type f -name 'hawkbit-*.jar' -exec cp {} ../../binary-official/hawkbit-$HBT_VER \;
+# MSYS2
+find . -type f -name 'hawkbit-*.jar' -exec cp {} ../hawkbit-1.0.2-bin \;
 
 cd ~/hawkbit
 
@@ -76,11 +78,15 @@ cd ~/hawkbit
 
 cd ~/hawkbit
 java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar  --hawkbit.dmf.rabbitmq.enabled=false
+# Change port
+java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar  --hawkbit.dmf.rabbitmq.enabled=false --server.port=8081
 
 java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar --spring.config.location=/opt/hawkbit/config/ --spring.profiles.active=prod --spring.config.name=application-mysql,application-rabbitmq
 
 ## Port: 8088
 java -jar binary-official/hawkbit-$HBT_VER/hawkbit-simple-ui-0-SNAPSHOT.jar
+# Change url
+java -jar hawkbit-ui.jar --hawkbit.server.mgmtUrl=http://localhost:8081
 ```
 
 ## Config

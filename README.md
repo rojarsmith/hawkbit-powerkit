@@ -32,6 +32,22 @@ git clone https://github.com/rojarsmith/hawkbit-powerkit.git
 HBT_VER=0.8.0
 ```
 
+### MSYS2
+
+```shell
+pacman -Syu
+
+pacman -S vim
+echo "alias vi='vim'" >> ~/.bashrc
+source ~/.bashrc
+
+printf '\nexport PATH="/c/Program Files/Eclipse Adoptium/jdk-21.0.7.6-hotspot/bin:$PATH"\n' >> ~/.bashrc && source ~/.bashrc
+printf '\nexport PATH="/c/My/Toolchain/apache-maven-3.9.6/bin:$PATH"\n' >> ~/.bashrc && source ~/.bashrc && source ~/.bashrc
+
+tar -zxvf hawkbit-1.0.2.tar.gz
+cd hawkbit-1.0.2
+```
+
 ## Build
 
 ```bash

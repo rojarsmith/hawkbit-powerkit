@@ -1,0 +1,14 @@
+FROM localhost:5000/openjdk11:jre-11.0.11_9-alpine
+
+ENV APP_HOME=/opt/bitdove
+
+EXPOSE 8080
+
+WORKDIR $APP_HOME
+
+COPY artifact/bitdove-update-server-0.3.0-SNAPSHOT.jar .
+
+RUN set -x \
+    && cd $APP_HOME
+
+ENTRYPOINT ["java","-jar","bitdove-update-server-0.3.0-SNAPSHOT.jar", "--hawkbit.dmf.rabbitmq.enabled=false", "-Xms768m -Xmx768m -XX:MaxMetaspaceSize=250m -XX:MetaspaceSize=250m -Xss300K -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+HeapDumpOnOutOfMemoryError"]

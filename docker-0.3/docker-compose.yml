@@ -1,0 +1,44 @@
+#
+# Copyright (c) 2022 Rojar Smith.
+#
+version: '3'
+
+services:
+  # ---------------------
+  # RabbitMQ service
+  # ---------------------
+  rabbitmq:
+    image: "localhost:5000/rabbitmq:3.11.3-management"
+    environment:
+      RABBITMQ_DEFAULT_VHOST: "/"
+    restart: always
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    labels:
+      NAME: "rabbitmq"
+
+  # ---------------------
+  # MariaDB service
+  # ---------------------
+  mysql:
+    image: "localhost:5000/mariadb:10.9.4"
+    environment:
+      MYSQL_DATABASE: "bitdove"
+      # MYSQL_USER: "root" is created by default in the container for mysql 5.7+
+      MYSQL_ALLOW_EMPTY_PASSWORD: "true"
+    restart: always
+    ports:
+      - "3306:3306"
+    labels:
+      NAME: "mariadb"
+
+  # ---------------------
+  # HawkBit service
+  # ---------------------
+  # hawkbit:
+  #   image: "localhost:5000/bitdove:$BITDOVE_VERSION"
+  #   restart: alway
+  #   ports:
+  #     - "8180:8080"
+  #   container_name: "hawkbit"

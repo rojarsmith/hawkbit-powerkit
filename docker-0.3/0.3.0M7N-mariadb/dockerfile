@@ -1,0 +1,22 @@
+FROM localhost:5000/bitdove:0.3.0M7N
+
+ENV MARIADB_DRIVER_VERSION=2.7.7
+
+COPY 0.3.0M7N-mariadb/KEY .
+COPY artifact/gnupg-2.2.31-r1.apk ./gnupg.apk
+COPY artifact/mariadb-java-client-${MARIADB_DRIVER_VERSION}.jar.asc ./mariadb-java-client.jar.asc
+COPY artifact/mariadb-java-client-${MARIADB_DRIVER_VERSION}.jar ./mariadb-java-client.jar
+
+RUN set -x \
+    && mkdir libjar \
+    && mv mariadb-java-client.jar.asc libjar \
+    && mv mariadb-java-client.jar libjar \
+    && apk add --allow-untrusted gnupg.apk \
+    && gpg --import KEY \
+    && gpg --verify --batch libjar/mariadb-java-client.jar.asc libjar/mariadb-java-client.jar \
+    && apk del gnupg \
+    && rm gnupg.apk \
+    && rm KEY
+
+ENTRYPOINT ["java", "-jar", "bitdove-update-server-0.3.0M7N.jar", "-classpath", ".:libjar"]
+CMD ["--hawkbit.dmf.rabbitmq.enabled=false"]

@@ -1,6 +1,6 @@
 # Hawkbit Powerkit
 
-## ENV
+## Environment
 
 ### ubuntu 24.04
 

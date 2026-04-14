@@ -1,0 +1,17 @@
+FROM localhost:5000/openjdk11:jre-11.0.11_9-alpine
+
+ENV APP_VERSION=0.3.0M7N \
+    APP_HOME=/opt/bitdove
+
+EXPOSE 8080
+
+WORKDIR $APP_HOME
+
+VOLUME "$APP_HOME/data"
+
+COPY artifact/bitdove-update-server-0.3.0M7N.jar .
+
+RUN set -x
+
+ENTRYPOINT ["java","-jar","bitdove-update-server-0.3.0M7N.jar"]
+CMD ["--hawkbit.dmf.rabbitmq.enabled=false"]

@@ -29,6 +29,7 @@ cd ~; mkdir -p hawkbit/config; cd hawkbit
 git clone https://github.com/rojarsmith/hawkbit-powerkit.git
 
 # Hawkbit version
+HBT_VER=1.0.3
 HBT_VER=0.8.0
 ```
 
@@ -43,14 +44,12 @@ source ~/.bashrc
 
 printf '\nexport PATH="/c/Program Files/Eclipse Adoptium/jdk-21.0.7.6-hotspot/bin:$PATH"\n' >> ~/.bashrc && source ~/.bashrc
 printf '\nexport PATH="/c/My/Toolchain/apache-maven-3.9.6/bin:$PATH"\n' >> ~/.bashrc && source ~/.bashrc && source ~/.bashrc
-
-tar -zxvf hawkbit-1.0.2.tar.gz
-cd hawkbit-1.0.2
 ```
 
 ## Build
 
 ```bash
+mkdir ~/hawkbit
 cd ~/hawkbit
 mkdir -p binary-official/hawkbit-$HBT_VER
 mkdir source-official; cd source-official
@@ -69,14 +68,10 @@ mvn -T$(nproc) clean install -DskipTests
 
 # find . -type f -name 'hawkbit-update-server*' -exec cp {} ../../binary-official/hawkbit-$HBT_VER \;
 find . -type f -name 'hawkbit-*.jar' -exec cp {} ../../binary-official/hawkbit-$HBT_VER \;
-# MSYS2
-find . -type f -name 'hawkbit-*.jar' -exec cp {} ../hawkbit-1.0.2-bin \;
 
-cd ~/hawkbit
+## --- Fast execute ---
 
-# --- Fast execute ---
-
-cd ~/hawkbit
+cd ~/hawkbit/binary-official/hawkbit-$HBT_VER
 java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar  --hawkbit.dmf.rabbitmq.enabled=false
 # Change port
 java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar  --hawkbit.dmf.rabbitmq.enabled=false --server.port=8081
@@ -566,6 +561,9 @@ sudo chmod -R 777 hawkbit-update-server-0.4.0JAP-SNAPSHOT.jar
 sudo chmod -R 777 hawkbit-device-simulator-0.4.0-SNAPSHOT.jar
 sudo docker build -t hawkbit-server:0.4.0JAP -f dockerfile .
 popd
+
+# http://localhost:8083
+java -jar hawkbit-device-simulator-0-SNAPSHOT.jar --hawkbit.device.simulator.amqp.enabled=false
 
 # Web UI: http://localhost:8088
 

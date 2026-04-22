@@ -46,6 +46,14 @@ printf '\nexport PATH="/c/Program Files/Eclipse Adoptium/jdk-21.0.7.6-hotspot/bi
 printf '\nexport PATH="/c/My/Toolchain/apache-maven-3.9.6/bin:$PATH"\n' >> ~/.bashrc && source ~/.bashrc && source ~/.bashrc
 ```
 
+### VMware Workstation
+
+```shell
+create-vmws-ubu.local.bat templateDir "D:\vmubu2404sv" outputRoot "D:" vmName "vmubu2404sv1"
+
+ping -4 vmubu2404sv1
+```
+
 ## Build
 
 ```bash

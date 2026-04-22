@@ -1,5 +1,6 @@
 /docker/artifact
 docker/entry/hawkbit-*.jar
 *-local.bat
+*.local.bat
 __tmp_body.json
 __tmp_http_code.txt

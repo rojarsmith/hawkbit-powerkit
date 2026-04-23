@@ -46,14 +46,6 @@ printf '\nexport PATH="/c/Program Files/Eclipse Adoptium/jdk-21.0.7.6-hotspot/bi
 printf '\nexport PATH="/c/My/Toolchain/apache-maven-3.9.6/bin:$PATH"\n' >> ~/.bashrc && source ~/.bashrc && source ~/.bashrc
 ```
 
-### VMware Workstation
-
-```shell
-create-vmws-ubu.local.bat templateDir "D:\vmubu2404sv" outputRoot "D:" vmName "vmubu2404sv1"
-
-ping -4 vmubu2404sv1
-```
-
 ## Build
 
 ```bash
@@ -67,12 +59,14 @@ tar -xzvf hawkbit-$HBT_VER.tar.gz
 cd hawkbit-$HBT_VER
 
 # Compile
-for i in {1..10}; do mvn -T$(nproc) clean install -DskipTests && break || echo "Build $i times failed, try again..."; done
+for i in {1..10}; do mvn -T$(nproc) clean install -DskipTests -Drevision=${HBT_VER}-RELEASE && break || echo "Build $i times failed, try again..."; done
 
 # OR
-mvn -T$(nproc) clean install -DskipTests
+mvn -T$(nproc) clean install -Drevision=${HBT_VER}-RELEASE -DskipTests
 
 # If multiple errors occur during the compilation process, it may be caused by unstable network disconnection and failure to download all dependencies. It is difficult to see the error by looking at the error code alone. Just execute the same compilation several times.
+
+mkdir ../../binary-official/hawkbit-$HBT_VER
 
 # find . -type f -name 'hawkbit-update-server*' -exec cp {} ../../binary-official/hawkbit-$HBT_VER \;
 find . -type f -name 'hawkbit-*.jar' -exec cp {} ../../binary-official/hawkbit-$HBT_VER \;
@@ -80,7 +74,7 @@ find . -type f -name 'hawkbit-*.jar' -exec cp {} ../../binary-official/hawkbit-$
 ## --- Fast execute ---
 
 cd ~/hawkbit/binary-official/hawkbit-$HBT_VER
-java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar  --hawkbit.dmf.rabbitmq.enabled=false
+java -jar hawkbit-update-server-${HBT_VER}-RELEASE.jar  --hawkbit.dmf.rabbitmq.enabled=false
 # Change port
 java -jar binary-official/hawkbit-$HBT_VER/hawkbit-update-server-0-SNAPSHOT.jar  --hawkbit.dmf.rabbitmq.enabled=false --server.port=8081
 
@@ -717,6 +711,22 @@ nslookup hawkbit1.bitdove.net ns-39-a.gandi.net
 
 # Docker
 
+```
+
+#### VMware Workstation
+
+```shell
+create-vmws-ubu.local.bat templateDir "D:\vmubu2404sv" outputRoot "D:" vmName "vmubu2404sv1"
+
+ping -4 vmubu2404sv1
+
+ssh-rsa-login-vmws.local.bat
+
+ssh srv@vmubu2404sv1
+
+exit
+
+deploy-vmws.local.bat
 ```
 
 ## Miscellaneous

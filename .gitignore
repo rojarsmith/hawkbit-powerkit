@@ -1,3 +1,4 @@
+/certs
 /docker/artifact
 docker/entry/hawkbit-*.jar
 *-local.bat

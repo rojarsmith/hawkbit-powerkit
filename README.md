@@ -715,18 +715,23 @@ nslookup hawkbit1.bitdove.net ns-39-a.gandi.net
 
 #### VMware Workstation
 
-```shell
-create-vmws-ubu.local.bat templateDir "D:\vmubu2404sv" outputRoot "D:" vmName "vmubu2404sv1"
+```bat
+create-vmws-ubu.local.bat templateDir "D:\tmp\vmubu2404sv" outputRoot "D:\tmp" vmName "vmubu2404sv1"
 
-ping -4 vmubu2404sv1
+ping -4 -n 3 vmubu2404sv1
 
 ssh-rsa-login-vmws.local.bat
 
-ssh srv@vmubu2404sv1
+ssh srv@vmubu2404sv1 "hostname"
 
-exit
+REM http
 
 deploy-vmws.local.bat
+
+REM OR https
+
+deploy-mkcert.local.bat
+deploy-vmws-cert.local.bat
 ```
 
 ## Miscellaneous

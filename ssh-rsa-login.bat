@@ -53,5 +53,4 @@ echo ssh %USER%@%HOST%
 echo ssh -i "PRIVATE_KEY" %USER%@%HOST%
 
 echo.
-pause
 endlocal

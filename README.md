@@ -732,6 +732,12 @@ REM OR https
 
 deploy-mkcert.local.bat
 deploy-vmws-cert.local.bat
+
+REM OR https, PM2
+deploy-vmws-cert-pm2.local.bat
+
+https://vmubu2404sv1:8443/
+https://vmubu2404sv1:8444/
 ```
 
 ## Miscellaneous

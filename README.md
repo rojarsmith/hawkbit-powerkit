@@ -742,6 +742,14 @@ https://vmubu2404sv1:8444/
 
 ## Miscellaneous
 
+### 1.0.x UI Bug
+
+The following error message will appear after logging in with your account and password:
+
+Could not navigate to 'UI/login' Reason: Couldn't find route for 'UI/login'
+
+Remove URL suffix, run `https://xxx.xxx.xxx` again.
+
 ### 0.10.0 Migration
 
 #### Create Target Filter

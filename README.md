@@ -760,6 +760,12 @@ spring.servlet.multipart.max-file-size=${MAX_ARTIFACT_SIZE:1073741824}
 spring.servlet.multipart.max-request-size=${MAX_ARTIFACT_SIZE:1073741824}
 hawkbit.server.security.dos.maxArtifactSize=${MAX_ARTIFACT_SIZE:1073741824}
 
+### herf HTTPS
+
+nginx: proxy_set_header X-Forwarded-Proto $scheme;
+
+springboot: --server.forward-headers-strategy=NATIVE
+
 ### 0.10.0 Migration
 
 #### Create Target Filter

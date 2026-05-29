@@ -89,6 +89,8 @@ java -jar hawkbit-ui.jar --hawkbit.server.mgmtUrl=http://localhost:8081
 ## Config
 
 ```bash
+# Reference from internal config file
+
 sudo mkdir -p /opt/hawkbit/config
 
 sudo tee /opt/hawkbit/config/application-prod.properties > /dev/null <<EOF

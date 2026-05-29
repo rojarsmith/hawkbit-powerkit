@@ -750,6 +750,14 @@ Could not navigate to 'UI/login' Reason: Couldn't find route for 'UI/login'
 
 Remove URL suffix, run `https://xxx.xxx.xxx` again.
 
+### 1.0.x File Limit
+
+for hawkbit-ui
+
+spring.servlet.multipart.max-file-size=${MAX_ARTIFACT_SIZE:1073741824}
+spring.servlet.multipart.max-request-size=${MAX_ARTIFACT_SIZE:1073741824}
+hawkbit.server.security.dos.maxArtifactSize=${MAX_ARTIFACT_SIZE:1073741824}
+
 ### 0.10.0 Migration
 
 #### Create Target Filter
